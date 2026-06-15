@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WildGuard AI – Smart Wildlife Detection Anywhere</title>
+    
+    <!-- Premium Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="css/styles.css">
+    
+    <!-- jsPDF library for client-side PDF Exports -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body class="dark-theme"> <!-- Dark mode by default matching Android design -->
+
+    <!-- Toast Notification Drawer -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- ROOT LAYOUT WRAPPER -->
+    <div id="app-container" class="app-container">
+        
+        <!-- SIDEBAR NAVIGATION DRAWER -->
+        <aside id="app-sidebar" class="app-sidebar hidden">
+            <div class="sidebar-header">
+                <div class="brand-logo">
+                    <!-- Green Shield SVG Icon representing WildGuard logo -->
+                    <svg viewBox="0 0 100 100" class="logo-svg">
+                        <path d="M50,10 L85,25 L85,55 C85,75 70,90 50,95 C30,90 15,75 15,55 L15,25 Z" fill="#2E7D32" stroke="#1B5E20" stroke-width="4"/>
+                        <circle cx="50" cy="50" r="18" fill="#1B5E20"/>
+                        <circle cx="50" cy="50" r="10" fill="#A5D6A7"/>
+                        <!-- AI circuitry line path -->
+                        <path d="M50,15 L50,32 M30,50 L32,50 M68,50 L70,50 M50,68 L50,85" stroke="#A5D6A7" stroke-width="3" stroke-linecap="round"/>
+                    </svg>
+                    <div class="brand-names">
+                        <h1 data-t="app_title">WildGuard AI</h1>
+                        <span data-t="app_tagline">Smart Wildlife Detection Anywhere</span>
+                    </div>
+                </div>
+            </div>
+            
+            <nav class="sidebar-menu">
+                <a href="#dashboard" class="menu-item active" id="nav-dashboard">
+                    <span class="icon">📈</span> <span class="label" data-t="view_analytics">Dashboard</span>
+                </a>
+                <a href="#camera-scan" class="menu-item" id="nav-camera">
+                    <span class="icon">📷</span> <span class="label" data-t="camera_scan_card">Camera Scan</span>
+                </a>
+                <a href="#gallery-scan" class="menu-item" id="nav-gallery">
+                    <span class="icon">📁</span> <span class="label" data-t="gallery_scan_card">Gallery Scan</span>
+                </a>
+                <a href="#video-scan" class="menu-item" id="nav-video">
+                    <span class="icon">🎥</span> <span class="label" data-t="video_scan_card">Video Scan</span>
+                </a>
+                <a href="#audio-scan" class="menu-item" id="nav-audio">
+                    <span class="icon">🎙️</span> <span class="label" data-t="audio_scan_card">Audio Scan</span>
+                </a>
+                <a href="#settings" class="menu-item" id="nav-settings">
+                    <span class="icon">⚙️</span> <span class="label" data-t="settings_title">Settings</span>
+                </a>
+                <a href="#admin" class="menu-item admin-only hidden" id="nav-admin">
+                    <span class="icon">👑</span> <span class="label" data-t="admin_panel">Admin Panel</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="active-user-info">
+                    <div class="avatar">👤</div>
+                    <div class="user-details">
+                        <span class="name" id="sidebar-user-name">Explorer</span>
+                        <span class="role" id="sidebar-user-role">User</span>
+                    </div>
+                </div>
+                <button id="btn-logout" class="btn-logout" data-t="logout">Logout</button>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT CONTAINER -->
+        <main id="app-main" class="app-main full-width">
+            
+            <!-- MOBILE TOP BAR BANNER -->
+            <header class="mobile-header">
+                <button id="btn-sidebar-toggle" class="btn-sidebar-toggle">☰</button>
+                <h2 id="mobile-page-title" data-t="app_title">WildGuard AI</h2>
+                <div class="mobile-avatar">👤</div>
+            </header>
+
+            <!-- ================= AUTH PAGE ================= -->
+            <section id="page-auth" class="page-section">
+                <div class="auth-card">
+                    <div class="auth-header">
+                        <svg viewBox="0 0 100 100" class="auth-logo">
+                            <path d="M50,10 L85,25 L85,55 C85,75 70,90 50,95 C30,90 15,75 15,55 L15,25 Z" fill="#2E7D32" stroke="#1B5E20" stroke-width="4"/>
+                            <circle cx="50" cy="50" r="18" fill="#1B5E20"/>
+                            <circle cx="50" cy="50" r="10" fill="#A5D6A7"/>
+                        </svg>
+                        <h2 data-t="app_title">WildGuard AI</h2>
+                        <p data-t="app_tagline">Smart Wildlife Detection Anywhere</p>
+                    </div>
+
+                    <!-- SIGN IN FORM -->
+                    <form id="form-login" class="auth-form">
+                        <div class="form-group">
+                            <label for="login-email" data-t="email">Email Address</label>
+                            <input type="email" id="login-email" required placeholder="admin@wildguard.ai">
+                        </div>
+                        <div class="form-group">
+                            <label for="login-password" data-t="password">Password</label>
+                            <input type="password" id="login-password" required placeholder="••••••••">
+                        </div>
+                        <button type="submit" class="btn-primary" data-t="login_btn">Sign In</button>
+                        <div class="auth-actions">
+                            <a href="#" id="link-forgot" data-t="forgot_pass">Forgot Password?</a>
+                            <a href="#" id="link-to-register" data-t="need_account">Register new node account</a>
+                        </div>
+                    </form>
+
+                    <!-- REGISTER FORM -->
+                    <form id="form-register" class="auth-form hidden">
+                        <div class="form-group">
+                            <label for="reg-name" data-t="fullName">Full Name</label>
+                            <input type="text" id="reg-name" required placeholder="Guard Node Name">
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-email" data-t="email">Email Address</label>
+                            <input type="email" id="reg-email" required placeholder="node@wildguard.ai">
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-password" data-t="password">Password</label>
+                            <input type="password" id="reg-password" required placeholder="••••••••">
+                        </div>
+                        <button type="submit" class="btn-primary" data-t="register_btn">Register Node</button>
+                        <div class="auth-actions">
+                            <a href="#" id="link-to-login" data-t="have_account">Already have an account? Sign In</a>
+                        </div>
+                    </form>
+
+                    <!-- FORGOT PASSWORD BYPASS SECTION -->
+                    <div id="forgot-reset-box" class="forgot-reset-box hidden">
+                        <p data-t="reset_desc">Offline backup reset key generated:</p>
+                        <h3 id="reset-code">OFFLINE_BYPASS_999</h3>
+                        <button id="btn-back-to-login" class="btn-secondary">Back to Sign In</button>
+                    </div>
+
+                    <div class="auth-divider">
+                        <span>OR</span>
+                    </div>
+
+                    <button id="btn-guest-login" class="btn-guest" data-t="guest_btn">Explore as Guest</button>
+                </div>
+            </section>
+
+            <!-- ================= DASHBOARD PAGE ================= -->
+            <section id="page-dashboard" class="page-section hidden">
+                <div class="dashboard-welcome">
+                    <div class="welcome-text">
+                        <h3 id="dashboard-welcome-title">Welcome Explorer!</h3>
+                        <p>Offline monitoring node is active. Choose an inference engine or model in settings to perform AI classifications.</p>
+                    </div>
+                    <button id="btn-quick-scan" class="btn-primary" data-t="quick_scan">⚡ Quick Scan</button>
+                </div>
+
+                <!-- STATS COUNTER BLOCKS -->
+                <div class="stats-grid">
+                    <div class="stats-card">
+                        <span class="label" data-t="total_detections">Total Detections</span>
+                        <h2 class="value" id="stats-total-detections">0</h2>
+                        <span class="subtext">Recorded locally on device</span>
+                    </div>
+                    <div class="stats-card danger">
+                        <span class="label" data-t="alerts_triggered">Alerts Triggered</span>
+                        <h2 class="value" id="stats-alerts-triggered">0</h2>
+                        <span class="subtext">Anomalies and Rare Species</span>
+                    </div>
+                </div>
+
+                <!-- DASHBOARD ANALYTICS CANVAS GRIDS -->
+                <div class="analytics-grid">
+                    <!-- 1. Detections Over Time Frequency Chart -->
+                    <div class="chart-card">
+                        <h4 data-t="detections_over_time">Detections Frequency Chart</h4>
+                        <div class="canvas-container">
+                            <canvas id="canvas-line-chart"></canvas>
+                        </div>
+                    </div>
+                    <!-- 2. Species Breakdown Percentage Pie Chart -->
+                    <div class="chart-card">
+                        <h4 data-t="species_breakdown">Species Breakdown Percentage</h4>
+                        <div class="canvas-container">
+                            <canvas id="canvas-pie-chart"></canvas>
+                        </div>
+                    </div>
+                    <!-- 3. Inference Heatmap Density Canvas -->
+                    <div class="chart-card full-row">
+                        <h4 data-t="view_heatmap">Inference Heatmap Density</h4>
+                        <div class="canvas-container heatmap-container">
+                            <canvas id="canvas-heatmap"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RECENT DETECTIONS HISTORY TABLE -->
+                <div class="history-card">
+                    <div class="history-header">
+                        <h4 data-t="recent_detections">Recent Detections History</h4>
+                        <div class="history-actions">
+                            <button id="btn-export-pdf" class="btn-secondary">📄 Export PDF</button>
+                            <button id="btn-export-csv" class="btn-secondary">📊 Export CSV</button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table" id="table-history">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Species Name</th>
+                                    <th>Scientific Name</th>
+                                    <th>Category</th>
+                                    <th>Confidence</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-history-body">
+                                <!-- Dynamic rows -->
+                                <tr><td colspan="7" class="empty-table">No detections recorded yet. Perform a scan to log data.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= CAMERA SCAN PAGE ================= -->
+            <section id="page-camera-scan" class="page-section hidden">
+                <div class="scanner-layout">
+                    <!-- Scanner Feed Window -->
+                    <div class="feed-window">
+                        <div class="video-container">
+                            <video id="camera-video" class="hidden" autoplay playsinline></video>
+                            <canvas id="camera-feed-canvas" class="feed-canvas"></canvas>
+                            <div id="camera-loader" class="spinner-overlay hidden">
+                                <div class="spinner"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Scanner Controls -->
+                    <div class="controls-panel">
+                        <div class="controls-actions">
+                            <button id="btn-camera-capture" class="btn-primary">Capture Frame & Detect</button>
+                            <button id="btn-camera-shuffle" class="btn-secondary">Shuffle Mock Feed</button>
+                        </div>
+                        
+                        <!-- Edge Performance metrics card -->
+                        <div id="camera-metrics" class="metrics-card hidden"></div>
+                        <!-- Classification details card -->
+                        <div id="camera-results" class="results-card hidden"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= GALLERY SCAN PAGE ================= -->
+            <section id="page-gallery-scan" class="page-section hidden">
+                <div class="scanner-layout">
+                    <!-- Preview Box -->
+                    <div class="feed-window">
+                        <div class="video-container">
+                            <canvas id="gallery-canvas" class="feed-canvas"></canvas>
+                            <div id="gallery-loader" class="spinner-overlay hidden">
+                                <div class="spinner"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gallery Controls -->
+                    <div class="controls-panel">
+                        <div class="file-uploader">
+                            <input type="file" id="gallery-file-input" accept="image/*" class="hidden">
+                            <button id="btn-gallery-select" class="btn-secondary" data-t="select_photo">Select Random Album Photo</button>
+                            <button id="btn-gallery-upload" class="btn-secondary">📂 Upload Custom File</button>
+                            <button id="btn-gallery-detect" class="btn-primary" data-t="run_classification">Run Classification</button>
+                        </div>
+                        <p id="gallery-file-info" class="file-info-label">File Selected: forest_grazing.jpg</p>
+
+                        <div id="gallery-metrics" class="metrics-card hidden"></div>
+                        <div id="gallery-results" class="results-card hidden"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= VIDEO FRAME SCAN PAGE ================= -->
+            <section id="page-video-scan" class="page-section hidden">
+                <div class="scanner-layout">
+                    <div class="feed-window">
+                        <div class="video-container">
+                            <canvas id="video-canvas" class="feed-canvas"></canvas>
+                            <div id="video-loader" class="spinner-overlay hidden">
+                                <div class="spinner"></div>
+                                <span id="video-frame-count" class="spinner-text">Analyzing Frame 0/25</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="controls-panel">
+                        <div class="file-uploader">
+                            <input type="file" id="video-file-input" accept="video/*" class="hidden">
+                            <button id="btn-video-upload" class="btn-secondary">📂 Upload Custom Video (MP4)</button>
+                            <button id="btn-video-analyze" class="btn-primary" data-t="deconstruct_video">Deconstruct & Scan Video (MP4)</button>
+                        </div>
+                        <p id="video-file-info" class="file-info-label">File Selected: simulated_wildlife_clip.mp4</p>
+                        
+                        <!-- Progress bar -->
+                        <div class="video-progress-bar-container">
+                            <div id="video-progress-bar" class="video-progress-bar"></div>
+                        </div>
+
+                        <div id="video-metrics" class="metrics-card hidden"></div>
+                        <div id="video-results" class="results-card hidden"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= AUDIO SCAN PAGE ================= -->
+            <section id="page-audio-scan" class="page-section hidden">
+                <div class="scanner-layout">
+                    <div class="feed-window">
+                        <div class="video-container flex-col-container">
+                            <div id="audio-visualizer-wave" class="waveform-box hidden">
+                                <span class="recording-label">🎤 Recording Animal Sounds...</span>
+                                <div id="audio-waves" class="audio-waves">
+                                    <!-- Dynamic waveform bars -->
+                                </div>
+                                <span id="audio-duration-label" class="duration-label">Duration: 0s</span>
+                            </div>
+                            
+                            <!-- 2D Mel-Spectrogram Heatmap canvas -->
+                            <div id="audio-spectrogram-box" class="spectrogram-box hidden">
+                                <span>2D Mel-Spectrogram Heatmap (CNN Input)</span>
+                                <canvas id="audio-spectrogram-canvas" class="audio-spec-canvas"></canvas>
+                                <span class="spec-footer-dim">Input dimensions: 128x256 • Channels: 1</span>
+                            </div>
+
+                            <p id="audio-placeholder-text" class="audio-placeholder">Tap record or upload audio call to begin spectrogram CNN extraction</p>
+                        </div>
+                    </div>
+
+                    <div class="controls-panel">
+                        <div class="controls-actions">
+                            <button id="btn-audio-record" class="btn-primary" data-t="record_call">🎙️ Record Call</button>
+                            <button id="btn-audio-upload" class="btn-secondary" data-t="upload_audio">📁 Upload Audio</button>
+                        </div>
+
+                        <div id="audio-results" class="results-card hidden"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= SETTINGS PAGE ================= -->
+            <section id="page-settings" class="page-section hidden">
+                <!-- AI Engine settings -->
+                <div class="settings-group">
+                    <h3 data-t="ai_engine">AI Engine Settings</h3>
+                    <div class="settings-card">
+                        <div class="setting-item flex-col">
+                            <span class="setting-title">Active Object Detection Model</span>
+                            <div class="setting-options-row">
+                                <label class="radio-label">
+                                    <input type="radio" name="model-type" value="YOLOv5" checked>
+                                    <span>YOLOv5 (High Accuracy)</span>
+                                </label>
+                                <label class="radio-label">
+                                    <input type="radio" name="model-type" value="EfficientDet">
+                                    <span>EfficientDet (Fast)</span>
+                                </label>
+                            </div>
+                        </div>
+                        <hr class="divider">
+                        <div class="setting-item flex-col">
+                            <span class="setting-title">Inference Execution Runtime</span>
+                            <div class="setting-options-row">
+                                <label class="radio-label">
+                                    <input type="radio" name="runtime-type" value="TFLite" checked>
+                                    <span>TensorFlow Lite</span>
+                                </label>
+                                <label class="radio-label">
+                                    <input type="radio" name="runtime-type" value="ONNX">
+                                    <span>ONNX Runtime</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Edge Simulation Settings -->
+                <div class="settings-group">
+                    <h3 data-t="edge_sim">Edge Device Simulation Settings</h3>
+                    <div class="settings-card">
+                        <div class="setting-item flex-row">
+                            <div class="setting-description">
+                                <span class="setting-title">Simulate CPU-Only Mode</span>
+                                <span class="setting-desc">Disables GPU acceleration to test battery draw and execution latency.</span>
+                            </div>
+                            <label class="switch-label">
+                                <input type="checkbox" id="check-cpu-only">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <hr class="divider">
+                        <div class="setting-item flex-row">
+                            <div class="setting-description">
+                                <span class="setting-title">Simulate Low Memory Mode</span>
+                                <span class="setting-desc">Limits heap allocation below 250MB RAM to simulate budget devices.</span>
+                            </div>
+                            <label class="switch-label">
+                                <input type="checkbox" id="check-low-mem">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <hr class="divider">
+                        <div class="setting-item flex-row">
+                            <div class="setting-description">
+                                <span class="setting-title">Force Offline Processing</span>
+                                <span class="setting-desc">Forces zero-network offline execution logic.</span>
+                            </div>
+                            <label class="switch-label">
+                                <input type="checkbox" id="check-offline">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- General preferences -->
+                <div class="settings-group">
+                    <h3 data-t="general_pref">General Preferences</h3>
+                    <div class="settings-card">
+                        <div class="setting-item flex-col">
+                            <span class="setting-title" data-t="theme_mode">Theme Mode</span>
+                            <div class="setting-options-row">
+                                <label class="radio-label">
+                                    <input type="radio" name="theme-mode" value="Dark" checked>
+                                    <span>Dark Mode</span>
+                                </label>
+                                <label class="radio-label">
+                                    <input type="radio" name="theme-mode" value="Light">
+                                    <span>Light Mode</span>
+                                </label>
+                            </div>
+                        </div>
+                        <hr class="divider">
+                        <div class="setting-item flex-col">
+                            <span class="setting-title" data-t="display_lang">Display Language</span>
+                            <div class="setting-options-row">
+                                <label class="radio-label">
+                                    <input type="radio" name="display-lang" value="English" checked>
+                                    <span>English</span>
+                                </label>
+                                <label class="radio-label">
+                                    <input type="radio" name="display-lang" value="Telugu">
+                                    <span>Telugu (తెలుగు)</span>
+                                </label>
+                                <label class="radio-label">
+                                    <input type="radio" name="display-lang" value="Hindi">
+                                    <span>Hindi (हिन्दी)</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= ADMIN PANEL PAGE ================= -->
+            <section id="page-admin" class="page-section hidden">
+                <!-- User management -->
+                <div class="history-card">
+                    <div class="history-header">
+                        <h4>Registered Nodes & Operators</h4>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table" id="table-users">
+                            <thead>
+                                <tr>
+                                    <th>Full Name</th>
+                                    <th>Email Address</th>
+                                    <th>Role Privilege</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-users-body">
+                                <!-- User rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- System Logs & Performance statistics -->
+                <div class="history-card" style="margin-top: 24px;">
+                    <div class="history-header">
+                        <h4>Device Performance Logging Logs</h4>
+                        <button id="btn-clear-perf-logs" class="btn-danger">Clear Logs</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table" id="table-perf-logs">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Model Type</th>
+                                    <th>Runtime Type</th>
+                                    <th>Latency</th>
+                                    <th>RAM (MB)</th>
+                                    <th>CPU (%)</th>
+                                    <th>Battery Draw</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-perf-logs-body">
+                                <!-- Performance logs rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Router Coordinator module and scripts -->
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
