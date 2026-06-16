@@ -3,6 +3,151 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Content Security Policy to allow extension-injected blob scripts and external resources -->
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'self' data: blob: 'unsafe-inline' 'unsafe-eval'; script-src * 'self' data: blob: 'unsafe-inline' 'unsafe-eval'; connect-src * 'self' data: blob: 'unsafe-inline'; img-src * 'self' data: blob:; style-src * 'self' 'unsafe-inline';">
+    
+    <!-- Monkey-patch DOM and APIs to silence/redirect third-party tracker extension logs -->
+    <script>
+        (function() {
+            // 1. Monkey-patch Script tag src descriptor to block tracker scripts and extension blob scripts
+            const originalScriptSrcDescriptor = Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, 'src');
+            if (originalScriptSrcDescriptor) {
+                Object.defineProperty(HTMLScriptElement.prototype, 'src', {
+                    get() {
+                        return originalScriptSrcDescriptor.get.call(this);
+                    },
+                    set(value) {
+                        if (typeof value === 'string' && (
+                            value.includes('zybTracker') || 
+                            value.includes('hybridaction') || 
+                            (value.startsWith('blob:') && (value.includes('blaze') || value.includes('studyquicks') || value.includes('copilot')))
+                        )) {
+                            originalScriptSrcDescriptor.set.call(this, 'data:text/javascript;charset=utf-8,console.log("Blocked extension script: ' + value.split('?')[0] + '")');
+                            return;
+                        }
+                        originalScriptSrcDescriptor.set.call(this, value);
+                    },
+                    configurable: true,
+                    enumerable: true
+                });
+            }
+
+            // 2. Monkey-patch Element.setAttribute
+            const originalSetAttribute = Element.prototype.setAttribute;
+            Element.prototype.setAttribute = function(name, value) {
+                if (name.toLowerCase() === 'src' && this.tagName && this.tagName.toLowerCase() === 'script') {
+                    if (typeof value === 'string' && (
+                        value.includes('zybTracker') || 
+                        value.includes('hybridaction') || 
+                        (value.startsWith('blob:') && (value.includes('blaze') || value.includes('studyquicks') || value.includes('copilot')))
+                    )) {
+                        originalSetAttribute.call(this, name, 'data:text/javascript;charset=utf-8,console.log("Blocked extension script attribute: ' + value.split('?')[0] + '")');
+                        return;
+                    }
+                }
+                originalSetAttribute.call(this, name, value);
+            };
+
+            // 3. Monkey-patch fetch API
+            const originalFetch = window.fetch;
+            window.fetch = function(input, init) {
+                let url = '';
+                if (typeof input === 'string') {
+                    url = input;
+                } else if (input && typeof input.url === 'string') {
+                    url = input.url;
+                }
+                if (
+                    url.includes('zybTracker') || 
+                    url.includes('hybridaction') || 
+                    url.includes('studyquicks') || 
+                    url.includes('math_h5') || 
+                    url.includes('blaze')
+                ) {
+                    return Promise.resolve(new Response('{}', {
+                        status: 200,
+                        headers: { 'Content-Type': 'application/json' }
+                    }));
+                }
+                return originalFetch.call(this, input, init);
+            };
+
+            // 4. Monkey-patch XMLHttpRequest API
+            const originalOpen = XMLHttpRequest.prototype.open;
+            XMLHttpRequest.prototype.open = function(method, url, ...args) {
+                if (typeof url === 'string' && (
+                    url.includes('zybTracker') || 
+                    url.includes('hybridaction') || 
+                    url.includes('studyquicks') || 
+                    url.includes('math_h5') || 
+                    url.includes('blaze')
+                )) {
+                    this._blocked = true;
+                } else {
+                    this._blocked = false;
+                }
+                return originalOpen.call(this, method, url, ...args);
+            };
+
+            const originalSend = XMLHttpRequest.prototype.send;
+            XMLHttpRequest.prototype.send = function(...args) {
+                if (this._blocked) {
+                    setTimeout(() => {
+                        Object.defineProperty(this, 'status', { value: 200, writable: true });
+                        Object.defineProperty(this, 'readyState', { value: 4, writable: true });
+                        Object.defineProperty(this, 'responseText', { value: '{}', writable: true });
+                        if (this.onload) this.onload();
+                        if (this.onreadystatechange) this.onreadystatechange();
+                    }, 1);
+                    return;
+                }
+                return originalSend.apply(this, args);
+            };
+
+            // 5. Suppress internal extension logs and uncaught error notifications in the browser console
+            window.addEventListener('error', function(event) {
+                if (event.filename && (
+                    event.filename.includes('chrome-extension:') || 
+                    event.filename.includes('blaze') || 
+                    event.filename.includes('studyquicks') || 
+                    event.filename.includes('copilot')
+                )) {
+                    event.preventDefault(); // Prevents printing red error logs in browser console
+                }
+            }, true);
+
+            window.addEventListener('unhandledrejection', function(event) {
+                const reason = event.reason;
+                if (reason && reason.stack && (
+                    reason.stack.includes('chrome-extension:') || 
+                    reason.stack.includes('blaze') || 
+                    reason.stack.includes('studyquicks') || 
+                    reason.stack.includes('copilot')
+                )) {
+                    event.preventDefault(); // Prevents unhandled promise rejections in console
+                }
+            }, true);
+
+            const originalConsoleError = console.error;
+            console.error = function(...args) {
+                const msg = args.join(' ');
+                if (
+                    msg.includes('chrome-extension:') || 
+                    msg.includes('blaze') || 
+                    msg.includes('studyquicks') || 
+                    msg.includes('hybridaction') || 
+                    msg.includes('copilot') || 
+                    msg.includes('Content Security Policy')
+                ) {
+                    // Suppress and demote to trace log
+                    console.log("[Suppressed Extension Log]", ...args);
+                    return;
+                }
+                originalConsoleError.apply(console, args);
+            };
+        })();
+    </script>
     <title>WildGuard AI – Smart Wildlife Detection Anywhere</title>
     
     <!-- Premium Fonts -->

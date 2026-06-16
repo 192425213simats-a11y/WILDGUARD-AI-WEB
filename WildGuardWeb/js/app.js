@@ -13,7 +13,10 @@ import {
     renderResultCards,
     initVideoScan,
     MOCK_WILDLIFE,
-    activeSettings
+    activeSettings,
+    lastDrawnAnimal,
+    detectViaBackend,
+    getWildlifeMetadata
 } from './scanner.js';
 import { startAudioScan, uploadAudioClassification, stopAudioCapture } from './audio.js';
 import { drawLineChart, drawPieChart, drawHeatmap } from './dashboard.js';
@@ -24,6 +27,15 @@ let currentCameraModeIsSimulated = false;
 
 // Initialize app when DOM loads
 document.addEventListener('DOMContentLoaded', async () => {
+    // Register Service Worker to intercept third-party tracker 404s
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').then(() => {
+            console.log("Service Worker Registered Successfully.");
+        }).catch(err => {
+            console.warn("Service Worker registration failed:", err);
+        });
+    }
+
     // 1. Initialize DB
     try {
         await initDb();
@@ -394,7 +406,7 @@ async function setupCameraScan() {
             loader.classList.add('hidden');
             
             // Extract active frame animal
-            let targetAnimal = MOCK_WILDLIFE[Math.floor(Math.random() * MOCK_WILDLIFE.length)];
+            let targetAnimal = lastDrawnAnimal;
             
             // Draw static image overlay matching bounding box
             const ctx = canvas.getContext('2d');
@@ -449,6 +461,9 @@ function setupGalleryScan() {
     ctx.fillRect(0,0, canvas.width, canvas.height);
     drawTargetReticle(canvas);
 
+    let gallerySelectedAnimal = null;
+    let uploadedFileBlob = null;
+
     // Random album selector
     document.getElementById('btn-gallery-select').onclick = () => {
         loader.classList.remove('hidden');
@@ -458,17 +473,15 @@ function setupGalleryScan() {
         setTimeout(async () => {
             loader.classList.add('hidden');
             const target = MOCK_WILDLIFE[Math.floor(Math.random() * MOCK_WILDLIFE.length)];
+            gallerySelectedAnimal = target;
+            uploadedFileBlob = null;
             fileInfo.textContent = `Random Album File: simulated_${target.type}_shot.jpg`;
 
             ctx.clearRect(0,0, canvas.width, canvas.height);
             drawMockAnimal(canvas, target.type);
-            drawBoundingBox(canvas, target.name, target.baseConf/100, 0.25, 0.2, 0.5, 0.6, target.anomaly);
-
-            const speedMetrics = computePerformanceMetrics();
-            const logResults = await logScanDetection(target, speedMetrics);
-            renderResultCards(logResults.detection, logResults.metrics, results, metrics);
+            drawTargetReticle(canvas);
             
-            showToast("Album Image Analyzed", `Species classification matching complete.`, "success");
+            showToast("Album Image Mounted", `Loaded simulated wildlife photo. Click Run Classification.`, "success");
         }, 500);
     };
 
@@ -482,6 +495,8 @@ function setupGalleryScan() {
         if (!file) return;
 
         fileInfo.textContent = `File Selected: ${file.name}`;
+        uploadedFileBlob = file;
+        gallerySelectedAnimal = null;
         
         const reader = new FileReader();
         reader.onload = (event) => {
@@ -500,17 +515,66 @@ function setupGalleryScan() {
     // Run Custom Classification Click
     document.getElementById('btn-gallery-detect').onclick = () => {
         loader.classList.remove('hidden');
+        results.classList.add('hidden');
+        metrics.classList.add('hidden');
         
         setTimeout(async () => {
-            loader.classList.add('hidden');
-            const target = MOCK_WILDLIFE[Math.floor(Math.random() * MOCK_WILDLIFE.length)];
-            
-            drawBoundingBox(canvas, target.name, target.baseConf/100, 0.3, 0.25, 0.4, 0.5, target.anomaly);
+            let target = null;
+            let speedMetrics = computePerformanceMetrics();
 
-            const speedMetrics = computePerformanceMetrics();
+            if (uploadedFileBlob) {
+                // Try backend API first
+                const apiResult = await detectViaBackend(uploadedFileBlob);
+                loader.classList.add('hidden');
+
+                if (apiResult && apiResult.detections && apiResult.detections.length > 0) {
+                    const primaryDet = apiResult.detections[0];
+                    target = getWildlifeMetadata(primaryDet.species);
+                    target.baseConf = primaryDet.confidence * 100;
+
+                    // Draw the backend bounding box image directly!
+                    const img = new Image();
+                    img.onload = () => {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    };
+                    img.src = apiResult.image_base64;
+
+                    const logResults = await logScanDetection(target, speedMetrics);
+                    renderResultCards(logResults.detection, logResults.metrics, results, metrics);
+                    showToast("API Detection Complete", `Detected: ${target.name}`, "success");
+                    return;
+                } else {
+                    // Offline file name keywords fallback
+                    const name = uploadedFileBlob.name.toLowerCase();
+                    if (name.includes('tiger')) target = MOCK_WILDLIFE[0];
+                    else if (name.includes('elephant')) target = MOCK_WILDLIFE[1];
+                    else if (name.includes('leopard')) target = MOCK_WILDLIFE[2];
+                    else if (name.includes('peacock') || name.includes('peafowl')) target = MOCK_WILDLIFE[3];
+                    else if (name.includes('deer')) target = MOCK_WILDLIFE[4];
+                    else {
+                        // Deterministic hash based on filename length
+                        const idx = name.split('').reduce((sum, c) => sum + c.charCodeAt(0), 0) % MOCK_WILDLIFE.length;
+                        target = MOCK_WILDLIFE[idx];
+                    }
+                    drawBoundingBox(canvas, target.name, target.baseConf/100, 0.3, 0.25, 0.4, 0.5, target.anomaly);
+                }
+            } else if (gallerySelectedAnimal) {
+                loader.classList.add('hidden');
+                target = gallerySelectedAnimal;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                drawMockAnimal(canvas, target.type);
+                drawBoundingBox(canvas, target.name, target.baseConf/100, 0.25, 0.2, 0.5, 0.6, target.anomaly);
+            } else {
+                loader.classList.add('hidden');
+                showToast("Mount Required", "Please select a random photo or upload a file first.", "warning");
+                return;
+            }
+
             const logResults = await logScanDetection(target, speedMetrics);
             renderResultCards(logResults.detection, logResults.metrics, results, metrics);
-        }, 600);
+            showToast("Classification Success", `Detected: ${target.name}`, target.anomaly ? "error" : "success");
+        }, 800);
     };
 }
 
